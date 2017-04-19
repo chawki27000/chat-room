@@ -4,9 +4,7 @@ import sys
 import signal
 import _pickle
 import struct
-import argparse
 
-SERVER_HOST = 'localhost'
 CHAT_SERVER_NAME = 'server'
 
 
@@ -52,7 +50,7 @@ class ChatServer():
             output.close()
         self.server.close()
 
-    def __init__(self, port, backlog=5):
+    def __init__(self, host, port, backlog=5):
         self.clients = 0
         self.clientmap = {}
         self.outputs = []  # list output sockets
@@ -60,7 +58,7 @@ class ChatServer():
 
         # Enable re-using socket address
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind((SERVER_HOST, port))
+        self.server.bind((host, int(port)))
         print('Server listening to port: %s ...' % port)
         self.server.listen(backlog)
 
@@ -151,80 +149,15 @@ class ChatServer():
 
 
 ################################################################################################
-class ChatClient():
-    def __init__(self, name, port, host=SERVER_HOST):
-        self.name = name
-        self.connected = False
-        self.host = host
-        self.port = port
 
-        # Initial prompt
-        self.prompt = '[' + '@'.join((name, socket.gethostname().split('.')[0])) + ']> '
-
-        # Connect to server at port
-        try:
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.connect((host, self.port))
-            print("Now connected to chat server@ port %d" % self.port)
-            self.connected = True
-
-            # Send my name...
-            send(self.sock, 'NAME: ' + self.name)
-            data = receive(self.sock)
-
-            # Contains client address, set it
-            addr = data.split('CLIENT: ')[1]
-            self.prompt = '[' + '@'.join((self.name, addr)) + ']> '
-
-        except socket.error as e:
-            print("Failed to connect to chat server @ port %d" % self.port)
-            sys.exit(1)
-
-    def run(self):
-        """ Chat client main loop """
-        while self.connected:
-            try:
-                sys.stdout.write(self.prompt)
-                sys.stdout.flush()
-
-                # Wait for input from stdin and socket
-                readable, writeable, exceptional = select.select([0, self.sock], [], [])
-
-                for sock in readable:  # only readable socket
-                    if sock == 0:  # sending data statement
-                        data = sys.stdin.readline().strip()
-                        if data: send(self.sock, data)  # Sending data
-
-                    elif sock == self.sock:  # receiving data statement
-                        data = receive(self.sock)
-                        if not data:
-                            print('Client shutting down.')
-                            self.connected = False
-                            break
-                        else:
-                            sys.stdout.write(data + '\n')
-                            sys.stdout.flush()
-
-            except KeyboardInterrupt:
-                print(" Client interrupted. """)
-                self.sock.close()
-                break
-
-
-########################################################################################
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Socket Server Example with Select')
-    parser.add_argument('--name', action="store", dest="name", required=True)
-    parser.add_argument('--port', action="store", dest="port", type=int, required=True)
+    # presentation
+    print("\t\t# # # #   Chat Room V0.1 - Server   # # # #\n")
 
-    given_args = parser.parse_args()
-    port = given_args.port
-    name = given_args.name
+    # Information reading
+    host = input("Please entre the server IP : ")
+    port = input("Please entre the server port : ")
 
-    if name == CHAT_SERVER_NAME:
-        server = ChatServer(port)
-        server.run()
-
-    else:
-        client = ChatClient(name=name, port=port)
-        client.run()
+    # Lunch
+    server = ChatServer(port=port, host=host)
+    server.run()
